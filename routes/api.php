@@ -1,55 +1,77 @@
-cat > routes/api.php << 'EOF'
 <?php
-declare(strict_types=1);
 
-$method = $_SERVER['REQUEST_METHOD'];
-$uri    = rtrim(parse_url($_SERVER['REQUEST_URI'], PHP_URL_PATH), '/') ?: '/';
+use App\Http\Controllers\CamisetaController;
+use App\Http\Controllers\ClienteController;
+use App\Http\Controllers\ContactoEmpresaController;
+use App\Http\Controllers\ContactoPersonalController;
+use App\Http\Controllers\TallaController;
+use App\Http\Controllers\VentaController;
+use Illuminate\Support\Facades\Route;
 
-if ($uri === '/' || $uri === '/api') {
-    http_response_code(200);
-    echo json_encode(['api' => 'TodoCamisetas API', 'version' => '1.0', 'status' => 'OK']);
-    exit;
-}
+/*
+|--------------------------------------------------------------------------
+| API Routes – TodoCamisetas
+|--------------------------------------------------------------------------
+| Base URL: http://localhost:8000/api
+*/
 
-function match_route(string $pattern, string $uri, string $method, string $expected): bool|array
-{
-    if (strtoupper($method) !== strtoupper($expected)) return false;
-    if (!preg_match($pattern, $uri, $m)) return false;
-    array_shift($m);
-    return $m;
-}
+// ── CAMISETAS ─────────────────────────────────────────────────────────────────
+Route::prefix('camisetas')->group(function () {
+    Route::get('/',                          [CamisetaController::class, 'index']);
+    Route::post('/',                         [CamisetaController::class, 'store']);
+    Route::get('/{id}',                      [CamisetaController::class, 'show']);
+    Route::put('/{id}',                      [CamisetaController::class, 'update']);
+    Route::patch('/{id}',                    [CamisetaController::class, 'update']);
+    Route::delete('/{id}',                   [CamisetaController::class, 'destroy']);
+    Route::get('/{id}/precio',               [CamisetaController::class, 'precioFinal']); // ?cliente_id=
+    Route::post('/{camiseta_id}/tallas',     [TallaController::class,    'asociarACamiseta']);
+});
 
-// CAMISETAS
-if ($m = match_route('#^/api/camisetas$#', $uri, $method, 'GET'))    CamisetaController::index();
-if ($m = match_route('#^/api/camisetas$#', $uri, $method, 'POST'))   CamisetaController::store();
-if ($m = match_route('#^/api/camisetas/(\d+)$#', $uri, $method, 'GET'))    CamisetaController::show((int)$m[0]);
-if ($m = match_route('#^/api/camisetas/(\d+)$#', $uri, $method, 'PUT'))    CamisetaController::update((int)$m[0]);
-if ($m = match_route('#^/api/camisetas/(\d+)$#', $uri, $method, 'PATCH'))  CamisetaController::update((int)$m[0]);
-if ($m = match_route('#^/api/camisetas/(\d+)$#', $uri, $method, 'DELETE')) CamisetaController::destroy((int)$m[0]);
-if ($m = match_route('#^/api/camisetas/(\d+)/precio$#', $uri, $method, 'GET'))  CamisetaController::precioFinal((int)$m[0]);
-if ($m = match_route('#^/api/camisetas/(\d+)/tallas$#', $uri, $method, 'POST')) TallaController::asociarACamiseta((int)$m[0]);
+// ── CLIENTES ──────────────────────────────────────────────────────────────────
+Route::prefix('clientes')->group(function () {
+    Route::get('/',        [ClienteController::class, 'index']);
+    Route::post('/',       [ClienteController::class, 'store']);
+    Route::get('/{id}',    [ClienteController::class, 'show']);
+    Route::put('/{id}',    [ClienteController::class, 'update']);
+    Route::patch('/{id}',  [ClienteController::class, 'patch']);
+    Route::delete('/{id}', [ClienteController::class, 'destroy']);
 
-// CLIENTES
-if ($m = match_route('#^/api/clientes$#', $uri, $method, 'GET'))    ClienteController::index();
-if ($m = match_route('#^/api/clientes$#', $uri, $method, 'POST'))   ClienteController::store();
-if ($m = match_route('#^/api/clientes/(\d+)$#', $uri, $method, 'GET'))    ClienteController::show((int)$m[0]);
-if ($m = match_route('#^/api/clientes/(\d+)$#', $uri, $method, 'PUT'))    ClienteController::update((int)$m[0]);
-if ($m = match_route('#^/api/clientes/(\d+)$#', $uri, $method, 'PATCH'))  ClienteController::patch((int)$m[0]);
-if ($m = match_route('#^/api/clientes/(\d+)$#', $uri, $method, 'DELETE')) ClienteController::destroy((int)$m[0]);
-if ($m = match_route('#^/api/clientes/(\d+)/camisetas$#', $uri, $method, 'GET'))  CamisetaController::porCliente((int)$m[0]);
-if ($m = match_route('#^/api/clientes/(\d+)/camisetas$#', $uri, $method, 'POST')) CamisetaController::asociarCliente((int)$m[0]);
-if ($m = match_route('#^/api/clientes/(\d+)/camisetas/(\d+)$#', $uri, $method, 'DELETE')) CamisetaController::desasociarCliente((int)$m[0], (int)$m[1]);
+    // Camisetas del cliente con precio_final
+    Route::get('/{cliente_id}/camisetas', [CamisetaController::class, 'porCliente']);
 
-// TALLAS
-if ($m = match_route('#^/api/tallas$#', $uri, $method, 'GET'))    TallaController::index();
-if ($m = match_route('#^/api/tallas$#', $uri, $method, 'POST'))   TallaController::store();
-if ($m = match_route('#^/api/tallas/(\d+)$#', $uri, $method, 'GET'))    TallaController::show((int)$m[0]);
-if ($m = match_route('#^/api/tallas/(\d+)$#', $uri, $method, 'PUT'))    TallaController::update((int)$m[0]);
-if ($m = match_route('#^/api/tallas/(\d+)$#', $uri, $method, 'PATCH'))  TallaController::update((int)$m[0]);
-if ($m = match_route('#^/api/tallas/(\d+)$#', $uri, $method, 'DELETE')) TallaController::destroy((int)$m[0]);
+    // Contactos de empresa del cliente
+    Route::get   ('/{clienteId}/contactos-empresa',       [ContactoEmpresaController::class, 'index']);
+    Route::post  ('/{clienteId}/contactos-empresa',       [ContactoEmpresaController::class, 'store']);
+    Route::get   ('/{clienteId}/contactos-empresa/{id}',  [ContactoEmpresaController::class, 'show']);
+    Route::put   ('/{clienteId}/contactos-empresa/{id}',  [ContactoEmpresaController::class, 'update']);
+    Route::patch ('/{clienteId}/contactos-empresa/{id}',  [ContactoEmpresaController::class, 'patch']);
+    Route::delete('/{clienteId}/contactos-empresa/{id}',  [ContactoEmpresaController::class, 'destroy']);
 
-// 404
-http_response_code(404);
-echo json_encode(['message' => "Ruta no encontrada: [{$method}] {$uri}", 'status' => 404]);
-exit;
-EOF
+    // Contactos personales del cliente
+    Route::get   ('/{clienteId}/contactos-personal',      [ContactoPersonalController::class, 'index']);
+    Route::post  ('/{clienteId}/contactos-personal',      [ContactoPersonalController::class, 'store']);
+    Route::get   ('/{clienteId}/contactos-personal/{id}', [ContactoPersonalController::class, 'show']);
+    Route::put   ('/{clienteId}/contactos-personal/{id}', [ContactoPersonalController::class, 'update']);
+    Route::patch ('/{clienteId}/contactos-personal/{id}', [ContactoPersonalController::class, 'patch']);
+    Route::delete('/{clienteId}/contactos-personal/{id}', [ContactoPersonalController::class, 'destroy']);
+});
+
+// ── TALLAS ────────────────────────────────────────────────────────────────────
+Route::prefix('tallas')->group(function () {
+    Route::get('/',        [TallaController::class, 'index']);
+    Route::post('/',       [TallaController::class, 'store']);
+    Route::get('/{id}',    [TallaController::class, 'show']);
+    Route::put('/{id}',    [TallaController::class, 'update']);
+    Route::patch('/{id}',  [TallaController::class, 'update']);
+    Route::delete('/{id}', [TallaController::class, 'destroy']);
+});
+
+// ── VENTAS ────────────────────────────────────────────────────────────────────
+Route::prefix('ventas')->group(function () {
+    Route::get('/estadisticas',  [VentaController::class, 'estadisticas']); // ANTES de /{id}
+    Route::get('/',              [VentaController::class, 'index']);
+    Route::post('/',             [VentaController::class, 'store']);
+    Route::get('/{id}',          [VentaController::class, 'show']);
+    Route::patch('/{id}',        [VentaController::class, 'patch']);
+    Route::delete('/{id}',       [VentaController::class, 'destroy']);
+});
