@@ -1,0 +1,6 @@
+cat > .gitignore << 'EOF'
+.env
+vendor/
+*.log
+.DS_Store
+EOF
